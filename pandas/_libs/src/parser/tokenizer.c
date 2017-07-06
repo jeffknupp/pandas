@@ -169,7 +169,7 @@ int parser_cleanup(parser_t *self) {
 }
 
 int parser_init(parser_t *self) {
-    int sz;
+    size_t sz;
 
     /*
       Initialize data buffers
@@ -196,14 +196,14 @@ int parser_init(parser_t *self) {
     sz = STREAM_INIT_SIZE / 10;
     sz = sz ? sz : 1;
     self->words = (char **)malloc(sz * sizeof(char *));
-    self->word_starts = (int *)malloc(sz * sizeof(int));
+    self->word_starts = (size_t *)malloc(sz * sizeof(size_t));
     self->words_cap = sz;
     self->words_len = 0;
 
     // line pointers and metadata
-    self->line_start = (int *)malloc(sz * sizeof(int));
+    self->line_start = (size_t *)malloc(sz * sizeof(size_t));
 
-    self->line_fields = (int *)malloc(sz * sizeof(int));
+    self->line_fields = (size_t *)malloc(sz * sizeof(size_t));
 
     self->lines_cap = sz;
     self->lines = 0;
@@ -304,11 +304,11 @@ static int make_stream_space(parser_t *self, size_t nbytes) {
              "self->words_cap=%d\n",
              nbytes, self->words_cap))
         newptr = safe_realloc((void *)self->word_starts,
-                              sizeof(int) * self->words_cap);
+                              sizeof(size_t) * self->words_cap);
         if (newptr == NULL) {
             return PARSER_OUT_OF_MEMORY;
         } else {
-            self->word_starts = (int *)newptr;
+            self->word_starts = (size_t *)newptr;
         }
     }
 
@@ -317,8 +317,8 @@ static int make_stream_space(parser_t *self, size_t nbytes) {
     */
     cap = self->lines_cap;
     self->line_start =
-        (int *)grow_buffer((void *)self->line_start, self->lines + 1,
-                           &self->lines_cap, nbytes, sizeof(int), &status);
+        (size_t *)grow_buffer((void *)self->line_start, self->lines + 1,
+                           &self->lines_cap, nbytes, sizeof(size_t), &status);
     TRACE((
         "make_stream_space: grow_buffer(self->line_start, %zu, %zu, %zu, %d)\n",
         self->lines + 1, self->lines_cap, nbytes, status))
@@ -331,11 +331,11 @@ static int make_stream_space(parser_t *self, size_t nbytes) {
         TRACE(("make_stream_space: cap != self->lines_cap, nbytes = %d\n",
                nbytes))
         newptr = safe_realloc((void *)self->line_fields,
-                              sizeof(int) * self->lines_cap);
+                              sizeof(size_t) * self->lines_cap);
         if (newptr == NULL) {
             return PARSER_OUT_OF_MEMORY;
         } else {
-            self->line_fields = (int *)newptr;
+            self->line_fields = (size_t *)newptr;
         }
     }
 
@@ -350,7 +350,7 @@ static int push_char(parser_t *self, char c) {
             ("push_char: ERROR!!! self->stream_len(%d) >= "
              "self->stream_cap(%d)\n",
              self->stream_len, self->stream_cap))
-        int bufsize = 100;
+        size_t bufsize = 100;
         self->error_msg = (char *)malloc(bufsize);
         snprintf(self->error_msg, bufsize,
                  "Buffer overflow caught - possible malformed input file.\n");
@@ -367,7 +367,7 @@ int P_INLINE end_field(parser_t *self) {
             ("end_field: ERROR!!! self->words_len(%zu) >= "
              "self->words_cap(%zu)\n",
              self->words_len, self->words_cap))
-        int bufsize = 100;
+        size_t bufsize = 100;
         self->error_msg = (char *)malloc(bufsize);
         snprintf(self->error_msg, bufsize,
                  "Buffer overflow caught - possible malformed input file.\n");
@@ -399,8 +399,8 @@ int P_INLINE end_field(parser_t *self) {
 }
 
 static void append_warning(parser_t *self, const char *msg) {
-    int ex_length;
-    int length = strlen(msg);
+    size_t ex_length;
+    size_t length = strlen(msg);
     void *newptr;
 
     if (self->warn_msg == NULL) {
@@ -418,9 +418,9 @@ static void append_warning(parser_t *self, const char *msg) {
 
 static int end_line(parser_t *self) {
     char *msg;
-    int fields;
-    int ex_fields = self->expected_fields;
-    int bufsize = 100;  // for error or warning messages
+    size_t fields;
+    size_t ex_fields = self->expected_fields;
+    size_t bufsize = 100;  // for error or warning messages
 
     fields = self->line_fields[self->lines];
 
@@ -488,7 +488,9 @@ static int end_line(parser_t *self) {
         if ((self->lines >= self->header_end + 1) && fields < ex_fields) {
             // might overrun the buffer when closing fields
             if (make_stream_space(self, ex_fields - fields) < 0) {
-                self->error_msg = "out of memory";
+                size_t bufsize = 100;
+                self->error_msg = (char *)malloc(bufsize);
+                snprintf(self->error_msg, bufsize, "out of memory");
                 return -1;
             }
 
@@ -507,7 +509,7 @@ static int end_line(parser_t *self) {
             TRACE((
                 "end_line: ERROR!!! self->lines(%zu) >= self->lines_cap(%zu)\n",
                 self->lines, self->lines_cap))
-            int bufsize = 100;
+            size_t bufsize = 100;
             self->error_msg = (char *)malloc(bufsize);
             snprintf(self->error_msg, bufsize,
                      "Buffer overflow caught - "
@@ -568,7 +570,7 @@ static int parser_buffer_bytes(parser_t *self, size_t nbytes) {
     self->datalen = bytes_read;
 
     if (status != REACHED_EOF && self->data == NULL) {
-        int bufsize = 200;
+        size_t bufsize = 200;
         self->error_msg = (char *)malloc(bufsize);
 
         if (status == CALLING_READ_FAILED) {
@@ -599,7 +601,7 @@ static int parser_buffer_bytes(parser_t *self, size_t nbytes) {
     if (slen >= self->stream_cap) {                                           \
         TRACE(("PUSH_CHAR: ERROR!!! slen(%d) >= stream_cap(%d)\n", slen,      \
                self->stream_cap))                                             \
-        int bufsize = 100;                                                    \
+        size_t bufsize = 100;                                                    \
         self->error_msg = (char *)malloc(bufsize);                            \
         snprintf(self->error_msg, bufsize,                                    \
                  "Buffer overflow caught - possible malformed input file.\n");\
@@ -626,7 +628,7 @@ static int parser_buffer_bytes(parser_t *self, size_t nbytes) {
     stream = self->stream + self->stream_len;                        \
     slen = self->stream_len;                                         \
     self->state = STATE;                                             \
-    if (line_limit > 0 && self->lines == start_lines + (int)line_limit) {  \
+    if (line_limit > 0 && self->lines == start_lines + (size_t)line_limit) {  \
         goto linelimit;                                              \
     }
 
@@ -641,7 +643,7 @@ static int parser_buffer_bytes(parser_t *self, size_t nbytes) {
     stream = self->stream + self->stream_len;                        \
     slen = self->stream_len;                                         \
     self->state = STATE;                                             \
-    if (line_limit > 0 && self->lines == start_lines + (int)line_limit) { \
+    if (line_limit > 0 && self->lines == start_lines + (size_t)line_limit) { \
         goto linelimit;                                              \
     }
 
@@ -712,15 +714,17 @@ int skip_this_line(parser_t *self, int64_t rownum) {
     }
 }
 
-int tokenize_bytes(parser_t *self, size_t line_limit, int start_lines) {
-    int i, slen;
+int tokenize_bytes(parser_t *self, size_t line_limit, size_t start_lines) {
+    size_t i, slen;
     int should_skip;
     char c;
     char *stream;
     char *buf = self->data + self->datapos;
 
     if (make_stream_space(self, self->datalen - self->datapos) < 0) {
-        self->error_msg = "out of memory";
+        size_t bufsize = 100;
+        self->error_msg = (char *)malloc(bufsize);
+        snprintf(self->error_msg, bufsize, "out of memory");
         return -1;
     }
 
@@ -1121,7 +1125,7 @@ linelimit:
 }
 
 static int parser_handle_eof(parser_t *self) {
-    int bufsize = 100;
+    size_t bufsize = 100;
 
     TRACE(
         ("handling eof, datalen: %d, pstate: %d\n", self->datalen, self->state))
@@ -1165,9 +1169,9 @@ static int parser_handle_eof(parser_t *self) {
 }
 
 int parser_consume_rows(parser_t *self, size_t nrows) {
-    int i, offset, word_deletions, char_count;
+    size_t i, offset, word_deletions, char_count;
 
-    if ((int)nrows > self->lines) {
+    if (nrows > self->lines) {
         nrows = self->lines;
     }
 
@@ -1204,7 +1208,7 @@ int parser_consume_rows(parser_t *self, size_t nrows) {
     self->word_start -= char_count;
 
     /* move line metadata */
-    for (i = 0; i < self->lines - (int)nrows + 1; ++i) {
+    for (i = 0; i < self->lines - nrows + 1; ++i) {
         offset = i + nrows;
         self->line_start[i] = self->line_start[offset] - word_deletions;
         self->line_fields[i] = self->line_fields[offset];
@@ -1227,11 +1231,11 @@ int parser_trim_buffers(parser_t *self) {
     size_t new_cap;
     void *newptr;
 
-    int i;
+    size_t i;
 
     /* trim words, word_starts */
     new_cap = _next_pow2(self->words_len) + 1;
-    if ((int)new_cap < self->words_cap) {
+    if (new_cap < self->words_cap) {
         TRACE(("parser_trim_buffers: new_cap < self->words_cap\n"));
         newptr = safe_realloc((void *)self->words, new_cap * sizeof(char *));
         if (newptr == NULL) {
@@ -1239,11 +1243,11 @@ int parser_trim_buffers(parser_t *self) {
         } else {
             self->words = (char **)newptr;
         }
-        newptr = safe_realloc((void *)self->word_starts, new_cap * sizeof(int));
+        newptr = safe_realloc((void *)self->word_starts, new_cap * sizeof(size_t));
         if (newptr == NULL) {
             return PARSER_OUT_OF_MEMORY;
         } else {
-            self->word_starts = (int *)newptr;
+            self->word_starts = (size_t *)newptr;
             self->words_cap = new_cap;
         }
     }
@@ -1254,7 +1258,7 @@ int parser_trim_buffers(parser_t *self) {
         ("parser_trim_buffers: new_cap = %zu, stream_cap = %zu, lines_cap = "
          "%zu\n",
          new_cap, self->stream_cap, self->lines_cap));
-    if ((int)new_cap < self->stream_cap) {
+    if (new_cap < self->stream_cap) {
         TRACE(
             ("parser_trim_buffers: new_cap < self->stream_cap, calling "
              "safe_realloc\n"));
@@ -1282,19 +1286,19 @@ int parser_trim_buffers(parser_t *self) {
 
     /* trim line_start, line_fields */
     new_cap = _next_pow2(self->lines) + 1;
-    if ((int)new_cap < self->lines_cap) {
+    if (new_cap < self->lines_cap) {
         TRACE(("parser_trim_buffers: new_cap < self->lines_cap\n"));
-        newptr = safe_realloc((void *)self->line_start, new_cap * sizeof(int));
+        newptr = safe_realloc((void *)self->line_start, new_cap * sizeof(size_t));
         if (newptr == NULL) {
             return PARSER_OUT_OF_MEMORY;
         } else {
-            self->line_start = (int *)newptr;
+            self->line_start = (size_t *)newptr;
         }
-        newptr = safe_realloc((void *)self->line_fields, new_cap * sizeof(int));
+        newptr = safe_realloc((void *)self->line_fields, new_cap * sizeof(size_t));
         if (newptr == NULL) {
             return PARSER_OUT_OF_MEMORY;
         } else {
-            self->line_fields = (int *)newptr;
+            self->line_fields = (size_t *)newptr;
             self->lines_cap = new_cap;
         }
     }
@@ -1303,7 +1307,7 @@ int parser_trim_buffers(parser_t *self) {
 }
 
 void debug_print_parser(parser_t *self) {
-    int j, line;
+    size_t j, line;
     char *token;
 
     for (line = 0; line < self->lines; ++line) {
@@ -1324,7 +1328,7 @@ void debug_print_parser(parser_t *self) {
 
 int _tokenize_helper(parser_t *self, size_t nrows, int all) {
     int status = 0;
-    int start_lines = self->lines;
+    size_t start_lines = self->lines;
 
     if (self->state == FINISHED) {
         return 0;
@@ -1332,10 +1336,10 @@ int _tokenize_helper(parser_t *self, size_t nrows, int all) {
 
     TRACE((
         "_tokenize_helper: Asked to tokenize %d rows, datapos=%d, datalen=%d\n",
-        (int)nrows, self->datapos, self->datalen));
+        nrows, self->datapos, self->datalen));
 
     while (1) {
-        if (!all && self->lines - start_lines >= (int)nrows) break;
+        if (!all && self->lines - start_lines >= nrows) break;
 
         if (self->datapos == self->datalen) {
             status = parser_buffer_bytes(self, self->chunksize);
