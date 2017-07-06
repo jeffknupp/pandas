@@ -69,14 +69,18 @@ static void free_if_not_null(void **ptr) {
 
 */
 
-static void *grow_buffer(void *buffer, int length, int *capacity, int space,
-                         int elsize, int *error) {
-    int cap = *capacity;
+static void *grow_buffer(void *buffer, size_t length, size_t *capacity, size_t space,
+                         size_t elsize, int *error) {
+    size_t cap = *capacity;
     void *newbuffer = buffer;
 
     // Can we fit potentially nbytes tokens (+ null terminators) in the stream?
     while ((length + space >= cap) && (newbuffer != NULL)) {
-        cap = cap ? cap << 1 : 2;
+        if (cap < 1024 * 1024 * 1024) {
+            cap = cap ? cap << 1 : 2;
+        } else {
+            cap *= 2;
+        }
         buffer = newbuffer;
         newbuffer = safe_realloc(newbuffer, elsize * cap);
     }
@@ -247,7 +251,7 @@ void parser_del(parser_t *self) {
 }
 
 static int make_stream_space(parser_t *self, size_t nbytes) {
-    int i, status, cap;
+    size_t i, status, cap;
     void *orig_ptr, *newptr;
 
     // Can we fit potentially nbytes tokens (+ null terminators) in the stream?
@@ -1029,7 +1033,7 @@ int tokenize_bytes(parser_t *self, size_t line_limit, size_t start_lines) {
                     PUSH_CHAR(c);
                     self->state = IN_FIELD;
                 } else {
-                    int bufsize = 100;
+                    size_t bufsize = 100;
                     self->error_msg = (char *)malloc(bufsize);
                     snprintf(self->error_msg, bufsize,
                             "delimiter expected after quote in quote");
@@ -1083,7 +1087,7 @@ int tokenize_bytes(parser_t *self, size_t line_limit, size_t start_lines) {
                         --i;
                         buf--;  // let's try this character again (HACK!)
                         if (line_limit > 0 &&
-                            self->lines == start_lines + (int)line_limit) {
+                            self->lines == start_lines + line_limit) {
                             goto linelimit;
                         }
                     }
@@ -1234,7 +1238,12 @@ int parser_trim_buffers(parser_t *self) {
     size_t i;
 
     /* trim words, word_starts */
-    new_cap = _next_pow2(self->words_len) + 1;
+    if (new_cap < INT32_MAX) {
+        new_cap = _next_pow2(self->words_len) + 1;
+    } else {
+        new_cap *= 2;
+    }
+
     if (new_cap < self->words_cap) {
         TRACE(("parser_trim_buffers: new_cap < self->words_cap\n"));
         newptr = safe_realloc((void *)self->words, new_cap * sizeof(char *));
@@ -1253,7 +1262,12 @@ int parser_trim_buffers(parser_t *self) {
     }
 
     /* trim stream */
-    new_cap = _next_pow2(self->stream_len) + 1;
+    if (new_cap < INT32_MAX) {
+        new_cap = _next_pow2(self->stream_len) + 1;
+    } else {
+        new_cap *= 2;
+    }
+
     TRACE(
         ("parser_trim_buffers: new_cap = %zu, stream_cap = %zu, lines_cap = "
          "%zu\n",
@@ -1285,7 +1299,11 @@ int parser_trim_buffers(parser_t *self) {
     }
 
     /* trim line_start, line_fields */
-    new_cap = _next_pow2(self->lines) + 1;
+    if (new_cap < 1024 * 1024 * 1024) {
+        new_cap = _next_pow2(self->lines) + 1;
+    } else {
+        new_cap *= 2;
+    }
     if (new_cap < self->lines_cap) {
         TRACE(("parser_trim_buffers: new_cap < self->lines_cap\n"));
         newptr = safe_realloc((void *)self->line_start, new_cap * sizeof(size_t));
