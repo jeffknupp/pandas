@@ -251,7 +251,8 @@ void parser_del(parser_t *self) {
 }
 
 static int make_stream_space(parser_t *self, size_t nbytes) {
-    size_t i, status, cap;
+    size_t i, cap;
+    int status;
     void *orig_ptr, *newptr;
 
     // Can we fit potentially nbytes tokens (+ null terminators) in the stream?
@@ -422,14 +423,15 @@ static void append_warning(parser_t *self, const char *msg) {
 
 static int end_line(parser_t *self) {
     char *msg;
-    size_t fields;
-    size_t ex_fields = self->expected_fields;
+    int fields;
+    int ex_fields = self->expected_fields;
     size_t bufsize = 100;  // for error or warning messages
 
     fields = self->line_fields[self->lines];
 
     TRACE(("end_line: Line end, nfields: %d\n", fields));
 
+    TRACE(("end_line: lines: %d\n", self->lines));
     if (self->lines > 0) {
         if (self->expected_fields >= 0) {
             ex_fields = self->expected_fields;
@@ -437,6 +439,7 @@ static int end_line(parser_t *self) {
             ex_fields = self->line_fields[self->lines - 1];
         }
     }
+    TRACE(("end_line: ex_fields: %d\n", ex_fields));
 
     if (self->state == START_FIELD_IN_SKIP_LINE ||
         self->state == IN_FIELD_IN_SKIP_LINE ||
@@ -492,6 +495,7 @@ static int end_line(parser_t *self) {
         if ((self->lines >= self->header_end + 1) && fields < ex_fields) {
             // might overrun the buffer when closing fields
             if (make_stream_space(self, ex_fields - fields) < 0) {
+                TRACE(("lines %d header_end %d field %d ex_fields %d\n", self->lines, self->header_end + 1, fields, ex_fields));
                 size_t bufsize = 100;
                 self->error_msg = (char *)malloc(bufsize);
                 snprintf(self->error_msg, bufsize, "out of memory");

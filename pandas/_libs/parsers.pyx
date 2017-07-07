@@ -178,13 +178,13 @@ cdef extern from "parser/tokenizer.h":
         char thousands
 
         int header # Boolean: 1: has header, 0: no header
-        size_t header_start # header row start
-        size_t header_end # header row end
+        int header_start # header row start
+        int header_end # header row end
 
         void *skipset
         PyObject *skipfunc
         int64_t skip_first_N_rows
-        int skipfooter
+        size_t skipfooter
         # pick one, depending on whether the converter requires GIL
         double (*double_converter_nogil)(const char *, char **,
                                          char, char, char, int) nogil
@@ -195,7 +195,7 @@ cdef extern from "parser/tokenizer.h":
         char *warn_msg
         char *error_msg
 
-        int skip_empty_lines
+        size_t skip_empty_lines
 
     ctypedef struct coliter_t:
         char **words
