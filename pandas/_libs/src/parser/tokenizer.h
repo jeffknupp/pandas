@@ -182,7 +182,7 @@ typedef struct parser_t {
 
     int usecols;  // Boolean: 1: usecols provided, 0: none provided
 
-    size_t expected_fields;
+    int expected_fields;
     int error_bad_lines;
     int warn_bad_lines;
 
@@ -194,8 +194,8 @@ typedef struct parser_t {
     char thousands;
 
     int header;        // Boolean: 1: has header, 0: no header
-    size_t header_start;  // header row start
-    size_t header_end;    // header row end
+    int header_start;  // header row start
+    int header_end;    // header row end
 
     void *skipset;
     PyObject *skipfunc;
