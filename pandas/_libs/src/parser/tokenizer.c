@@ -472,7 +472,7 @@ static int end_line(parser_t *self) {
         if (self->error_bad_lines) {
             self->error_msg = (char *)malloc(bufsize);
             snprintf(self->error_msg, bufsize,
-                    "Expected %d fields in line %d, saw %d\n",
+                    "Expected %d fields in line %u, saw %d\n",
                     ex_fields, self->file_lines, fields);
 
             TRACE(("Error at line %d, %d fields\n", self->file_lines, fields));
@@ -1242,12 +1242,7 @@ int parser_trim_buffers(parser_t *self) {
     size_t i;
 
     /* trim words, word_starts */
-    if (new_cap < INT32_MAX) {
-        new_cap = _next_pow2(self->words_len) + 1;
-    } else {
-        new_cap *= 2;
-    }
-
+    new_cap = _next_pow2(self->words_len) + 1;
     if (new_cap < self->words_cap) {
         TRACE(("parser_trim_buffers: new_cap < self->words_cap\n"));
         newptr = safe_realloc((void *)self->words, new_cap * sizeof(char *));
