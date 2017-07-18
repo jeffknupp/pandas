@@ -637,20 +637,6 @@ def get_offset(name):
 getOffset = get_offset
 
 
-def get_offset_name(offset):
-    """
-    Return rule name associated with a DateOffset object
-
-    Examples
-    --------
-    get_offset_name(BMonthEnd(1)) --> 'EOM'
-    """
-
-    msg = "get_offset_name(offset) is deprecated. Use offset.freqstr instead"
-    warnings.warn(msg, FutureWarning, stacklevel=2)
-    return offset.freqstr
-
-
 def get_standard_freq(freq):
     """
     Return the standardized frequency string
@@ -975,8 +961,7 @@ class _FrequencyInferer(object):
             else:
                 return _maybe_add_count('D', days)
 
-        # Business daily. Maybe
-        if self.day_deltas == [1, 3]:
+        if self._is_business_daily():
             return 'B'
 
         wom_rule = self._get_wom_rule()
@@ -1011,6 +996,19 @@ class _FrequencyInferer(object):
         pos_check = self.month_position_check()
         return {'cs': 'MS', 'bs': 'BMS',
                 'ce': 'M', 'be': 'BM'}.get(pos_check)
+
+    def _is_business_daily(self):
+        # quick check: cannot be business daily
+        if self.day_deltas != [1, 3]:
+            return False
+
+        # probably business daily, but need to confirm
+        first_weekday = self.index[0].weekday()
+        shifts = np.diff(self.index.asi8)
+        shifts = np.floor_divide(shifts, _ONE_DAY)
+        weekdays = np.mod(first_weekday + np.cumsum(shifts), 7)
+        return np.all(((weekdays == 0) & (shifts == 3)) |
+                      ((weekdays > 0) & (weekdays <= 4) & (shifts == 1)))
 
     def _get_wom_rule(self):
         #         wdiffs = unique(np.diff(self.index.week))

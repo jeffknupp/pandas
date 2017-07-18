@@ -547,6 +547,43 @@ class NDFrame(PandasObject, SelectionMixin):
     def pop(self, item):
         """
         Return item and drop from frame. Raise KeyError if not found.
+
+        Parameters
+        ----------
+        item : str
+            Column label to be popped
+
+        Returns
+        -------
+        popped : Series
+
+        Examples
+        --------
+        >>> df = pd.DataFrame([('falcon', 'bird',    389.0),
+        ...                    ('parrot', 'bird',     24.0),
+        ...                    ('lion',   'mammal',   80.5),
+        ...                    ('monkey', 'mammal', np.nan)],
+        ...                   columns=('name', 'class', 'max_speed'))
+        >>> df
+             name   class  max_speed
+        0  falcon    bird      389.0
+        1  parrot    bird       24.0
+        2    lion  mammal       80.5
+        3  monkey  mammal        NaN
+
+        >>> df.pop('class')
+        0      bird
+        1      bird
+        2    mammal
+        3    mammal
+        Name: class, dtype: object
+
+        >>> df
+             name  max_speed
+        0  falcon      389.0
+        1  parrot       24.0
+        2    lion       80.5
+        3  monkey        NaN
         """
         result = self[item]
         del self[item]
@@ -2098,7 +2135,6 @@ it is assumed to be aliases for the column names.')
 
     _xs = xs
 
-    # TODO: Check if this was clearer in 0.12
     def select(self, crit, axis=0):
         """
         Return data corresponding to axis labels matching criteria
@@ -3116,7 +3152,7 @@ it is assumed to be aliases for the column names.')
     (e.g., np.mean(arr_2d, axis=0)) as opposed to
     mimicking the default Numpy behavior (e.g., np.mean(arr_2d)).
 
-    agg is an alias for aggregate. Use it.
+    `agg` is an alias for `aggregate`. Use the alias.
 
     Returns
     -------
@@ -4790,6 +4826,8 @@ it is assumed to be aliases for the column names.')
         label : {'right', 'left'}
             Which bin edge label to label bucket with
         convention : {'start', 'end', 's', 'e'}
+            For PeriodIndex only, controls whether to use the start or end of
+            `rule`
         loffset : timedelta
             Adjust the resampled time labels
         base : int, default 0
@@ -4909,6 +4947,47 @@ it is assumed to be aliases for the column names.')
         2000-01-01 00:03:00    17
         2000-01-01 00:06:00    26
         Freq: 3T, dtype: int64
+
+        For a Series with a PeriodIndex, the keyword `convention` can be
+        used to control whether to use the start or end of `rule`.
+
+        >>> s = pd.Series([1, 2], index=pd.period_range('2012-01-01',
+                                                        freq='A',
+                                                        periods=2))
+        >>> s
+        2012    1
+        2013    2
+        Freq: A-DEC, dtype: int64
+
+        Resample by month using 'start' `convention`. Values are assigned to
+        the first month of the period.
+
+        >>> s.resample('M', convention='start').asfreq().head()
+        2012-01    1.0
+        2012-02    NaN
+        2012-03    NaN
+        2012-04    NaN
+        2012-05    NaN
+        Freq: M, dtype: float64
+
+        Resample by month using 'end' `convention`. Values are assigned to
+        the last month of the period.
+
+        >>> s.resample('M', convention='end').asfreq()
+        2012-12    1.0
+        2013-01    NaN
+        2013-02    NaN
+        2013-03    NaN
+        2013-04    NaN
+        2013-05    NaN
+        2013-06    NaN
+        2013-07    NaN
+        2013-08    NaN
+        2013-09    NaN
+        2013-10    NaN
+        2013-11    NaN
+        2013-12    2.0
+        Freq: M, dtype: float64
 
         For DataFrame objects, the keyword ``on`` can be used to specify the
         column instead of the index for resampling.
