@@ -69,18 +69,14 @@ static void free_if_not_null(void **ptr) {
 
 */
 
-static void *grow_buffer(void *buffer, size_t length, size_t *capacity, size_t space,
-                         size_t elsize, int *error) {
-    size_t cap = *capacity;
+static void *grow_buffer(void *buffer, int length, int *capacity, int space,
+                         int elsize, int *error) {
+    int cap = *capacity;
     void *newbuffer = buffer;
 
     // Can we fit potentially nbytes tokens (+ null terminators) in the stream?
     while ((length + space >= cap) && (newbuffer != NULL)) {
-        if (cap < 1024 * 1024 * 1024) {
-            cap = cap ? cap << 1 : 2;
-        } else {
-            cap *= 2;
-        }
+        cap = cap ? cap << 1 : 2;
         buffer = newbuffer;
         newbuffer = safe_realloc(newbuffer, elsize * cap);
     }
@@ -431,7 +427,6 @@ static int end_line(parser_t *self) {
 
     TRACE(("end_line: Line end, nfields: %d\n", fields));
 
-    TRACE(("end_line: lines: %d\n", self->lines));
     if (self->lines > 0) {
         if (self->expected_fields >= 0) {
             ex_fields = self->expected_fields;
@@ -439,7 +434,6 @@ static int end_line(parser_t *self) {
             ex_fields = self->line_fields[self->lines - 1];
         }
     }
-    TRACE(("end_line: ex_fields: %d\n", ex_fields));
 
     if (self->state == START_FIELD_IN_SKIP_LINE ||
         self->state == IN_FIELD_IN_SKIP_LINE ||
@@ -495,7 +489,6 @@ static int end_line(parser_t *self) {
         if ((self->lines >= (unsigned long) self->header_end + 1) && fields < ex_fields) {
             // might overrun the buffer when closing fields
             if (make_stream_space(self, ex_fields - fields) < 0) {
-                TRACE(("lines %d header_end %d field %d ex_fields %d\n", self->lines, self->header_end + 1, fields, ex_fields));
                 size_t bufsize = 100;
                 self->error_msg = (char *)malloc(bufsize);
                 snprintf(self->error_msg, bufsize, "out of memory");
@@ -1262,12 +1255,7 @@ int parser_trim_buffers(parser_t *self) {
     }
 
     /* trim stream */
-    if (new_cap < INT32_MAX) {
-        new_cap = _next_pow2(self->stream_len) + 1;
-    } else {
-        new_cap *= 2;
-    }
-
+    new_cap = _next_pow2(self->stream_len) + 1;
     TRACE(
         ("parser_trim_buffers: new_cap = %zu, stream_cap = %zu, lines_cap = "
          "%zu\n",
@@ -1299,12 +1287,8 @@ int parser_trim_buffers(parser_t *self) {
     }
 
     /* trim line_start, line_fields */
-    if (new_cap < 1024 * 1024 * 1024) {
-        new_cap = _next_pow2(self->lines) + 1;
-    } else {
-        new_cap *= 2;
-    }
-    if (new_cap < self->lines_cap) {
+    new_cap = _next_pow2(self->lines) + 1;
+    if ((int)new_cap < self->lines_cap) {
         TRACE(("parser_trim_buffers: new_cap < self->lines_cap\n"));
         newptr = safe_realloc((void *)self->line_start, new_cap * sizeof(size_t));
         if (newptr == NULL) {
