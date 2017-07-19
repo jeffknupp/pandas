@@ -178,8 +178,8 @@ cdef extern from "parser/tokenizer.h":
         char thousands
 
         int header # Boolean: 1: has header, 0: no header
-        int header_start # header row start
-        int header_end # header row end
+        ssize_t header_start # header row start
+        ssize_t header_end # header row end
 
         void *skipset
         PyObject *skipfunc
@@ -1020,7 +1020,7 @@ cdef class TextReader:
     def _convert_column_data(self, rows=None, upcast_na=False, footer=0):
         cdef:
             size_t i
-            Py_ssize_t nused
+            int nused
             kh_str_t *na_hashset = NULL
             size_t start, end
             object name, na_flist, col_dtype = None
@@ -1338,7 +1338,7 @@ cdef class TextReader:
         kh_destroy_str(table)
 
     cdef _get_column_name(self, Py_ssize_t i, Py_ssize_t nused):
-        cdef Py_ssize_t j
+        cdef int j
         if self.has_usecols and self.names is not None:
             if (not callable(self.usecols) and
                     len(self.names) == len(self.usecols)):

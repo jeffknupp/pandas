@@ -457,7 +457,7 @@ static int end_line(parser_t *self) {
         return 0;
     }
 
-    if (!(self->lines <= self->header_end + 1) &&
+    if (!(self->lines <= (unsigned long) self->header_end + 1) &&
         (self->expected_fields < 0 && fields > ex_fields) && !(self->usecols)) {
         // increment file line count
         self->file_lines++;
@@ -472,7 +472,7 @@ static int end_line(parser_t *self) {
         if (self->error_bad_lines) {
             self->error_msg = (char *)malloc(bufsize);
             snprintf(self->error_msg, bufsize,
-                    "Expected %d fields in line %u, saw %d\n",
+                    "Expected %d fields in line %zu, saw %d\n",
                     ex_fields, self->file_lines, fields);
 
             TRACE(("Error at line %d, %d fields\n", self->file_lines, fields));
@@ -484,7 +484,7 @@ static int end_line(parser_t *self) {
                 // pass up error message
                 msg = (char *)malloc(bufsize);
                 snprintf(msg, bufsize,
-                        "Skipping line %d: expected %d fields, saw %d\n",
+                        "Skipping line %zu: expected %d fields, saw %d\n",
                          self->file_lines, ex_fields, fields);
                 append_warning(self, msg);
                 free(msg);
@@ -492,7 +492,7 @@ static int end_line(parser_t *self) {
         }
     } else {
         // missing trailing delimiters
-        if ((self->lines >= self->header_end + 1) && fields < ex_fields) {
+        if ((self->lines >= (unsigned long) self->header_end + 1) && fields < ex_fields) {
             // might overrun the buffer when closing fields
             if (make_stream_space(self, ex_fields - fields) < 0) {
                 TRACE(("lines %d header_end %d field %d ex_fields %d\n", self->lines, self->header_end + 1, fields, ex_fields));
@@ -1151,7 +1151,7 @@ static int parser_handle_eof(parser_t *self) {
         case IN_QUOTED_FIELD:
             self->error_msg = (char *)malloc(bufsize);
             snprintf(self->error_msg, bufsize,
-                    "EOF inside string starting at line %d", self->file_lines);
+                    "EOF inside string starting at line %zu", self->file_lines);
             return -1;
 
         case ESCAPED_CHAR:
@@ -1243,6 +1243,7 @@ int parser_trim_buffers(parser_t *self) {
 
     /* trim words, word_starts */
     new_cap = _next_pow2(self->words_len) + 1;
+
     if (new_cap < self->words_cap) {
         TRACE(("parser_trim_buffers: new_cap < self->words_cap\n"));
         newptr = safe_realloc((void *)self->words, new_cap * sizeof(char *));
@@ -1328,7 +1329,7 @@ void debug_print_parser(parser_t *self) {
     char *token;
 
     for (line = 0; line < self->lines; ++line) {
-        printf("(Parsed) Line %d: ", line);
+        printf("(Parsed) Line %zu: ", line);
 
         for (j = 0; j < self->line_fields[j]; ++j) {
             token = self->words[j + self->line_start[line]];
