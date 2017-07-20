@@ -194,8 +194,8 @@ typedef struct parser_t {
     char thousands;
 
     int header;        // Boolean: 1: has header, 0: no header
-    int header_start;  // header row start
-    int header_end;    // header row end
+    ssize_t header_start;  // header row start
+    ssize_t header_end;    // header row end
 
     void *skipset;
     PyObject *skipfunc;

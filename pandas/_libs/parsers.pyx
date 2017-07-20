@@ -178,8 +178,8 @@ cdef extern from "parser/tokenizer.h":
         char thousands
 
         int header # Boolean: 1: has header, 0: no header
-        int header_start # header row start
-        int header_end # header row end
+        ssize_t header_start # header row start
+        ssize_t header_end # header row end
 
         void *skipset
         PyObject *skipfunc
@@ -1019,7 +1019,8 @@ cdef class TextReader:
 
     def _convert_column_data(self, rows=None, upcast_na=False, footer=0):
         cdef:
-            size_t i, nused
+            size_t i
+            int nused
             kh_str_t *na_hashset = NULL
             size_t start, end
             object name, na_flist, col_dtype = None
@@ -1337,7 +1338,7 @@ cdef class TextReader:
         kh_destroy_str(table)
 
     cdef _get_column_name(self, Py_ssize_t i, Py_ssize_t nused):
-        cdef size_t j
+        cdef int j
         if self.has_usecols and self.names is not None:
             if (not callable(self.usecols) and
                     len(self.names) == len(self.usecols)):
@@ -1686,7 +1687,7 @@ cdef inline void _to_fw_string_nogil(parser_t *parser, size_t col,
                                      size_t line_start, size_t line_end,
                                      size_t width, char *data) nogil:
     cdef:
-        Py_ssize_t i
+        size_t i
         coliter_t it
         const char *word = NULL
 
@@ -2349,7 +2350,7 @@ def _to_structured_array(dict columns, object names, object usecols):
 cdef _fill_structured_column(char *dst, char* src, size_t elsize,
                              size_t stride, size_t length, bint incref):
     cdef:
-        Py_ssize_t i
+        size_t i
 
     if incref:
         util.transfer_object_column(dst, src, stride, length)
